@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Profile } from "@/data/links";
+import { OWNER_EMAIL } from "@/lib/firebase";
 import { saveMyLink, useMyLink } from "@/lib/store";
+import { useAuth } from "@/lib/use-auth";
 
 type Errors = { title?: string; url?: string };
 
@@ -33,7 +35,7 @@ function iconFor(url: string) {
 }
 
 // 프로필 수정 폼 — 저장 버튼을 눌러야 반영
-function ProfileForm({ profile, onSave }: { profile: Profile; onSave: (p: Profile) => void }) {
+function ProfileForm({ profile, onSave }: { profile: Profile; onSave: (p: Profile) => Promise<void> }) {
   const [name, setName] = useState(profile.name);
   const [bio, setBio] = useState(profile.bio);
   const [image, setImage] = useState(profile.image);
@@ -58,8 +60,9 @@ function ProfileForm({ profile, onSave }: { profile: Profile; onSave: (p: Profil
       normalizedImage = n;
     }
     setError("");
-    setSaved(true);
-    onSave({ name: name.trim(), bio: bio.trim(), image: normalizedImage });
+    onSave({ name: name.trim(), bio: bio.trim(), image: normalizedImage })
+      .then(() => setSaved(true))
+      .catch(() => setError("저장하지 못했어요. 다시 시도해주세요"));
   }
 
   return (
@@ -100,8 +103,19 @@ function ProfileForm({ profile, onSave }: { profile: Profile; onSave: (p: Profil
 // 링크 추가 (Create) / 삭제 (Delete)
 // 흐름: 1 입력 → 2 버튼 클릭 → 3 데이터 추가 → 4 화면 갱신
 export default function MyPage() {
-  const data = useMyLink();
+  const { user, ready, signIn, signOut } = useAuth();
+  const isOwner = !!user && user.email === OWNER_EMAIL;
+  const { loading, ...data } = useMyLink();
   const { profile, links } = data;
+  const [saveError, setSaveError] = useState("");
+
+  function save(next: typeof data) {
+    setSaveError("");
+    return saveMyLink(next).catch((err) => {
+      setSaveError("저장하지 못했어요. 로그인 상태를 확인해주세요");
+      throw err;
+    });
+  }
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [errors, setErrors] = useState<Errors>({});
@@ -128,13 +142,13 @@ export default function MyPage() {
     }
 
     // 3. 목록에 추가 → 데이터가 바뀌면 화면이 자동으로 갱신됨
-    saveMyLink({
+    save({
       ...data,
       links: [
         ...links,
         { id: Date.now(), title: trimmedTitle, url: normalized, icon: iconFor(normalized) },
       ],
-    });
+    }).catch(() => {});
 
     // 검증 성공: 입력 칸 비우기
     setTitle("");
@@ -143,7 +157,7 @@ export default function MyPage() {
   }
 
   function handleDelete(id: number) {
-    saveMyLink({ ...data, links: links.filter((link) => link.id !== id) });
+    save({ ...data, links: links.filter((link) => link.id !== id) }).catch(() => {});
   }
 
   return (
@@ -159,15 +173,40 @@ export default function MyPage() {
           </NextLink>
         </header>
 
+        {!ready || (isOwner && loading) ? (
+          <p className="py-10 text-center text-sm text-muted-foreground">불러오는 중…</p>
+        ) : !isOwner ? (
+          <section className={panel}>
+            <p className="text-sm">
+              {user
+                ? `${user.email} 계정은 수정 권한이 없어요. 주인 계정으로 로그인해주세요.`
+                : "링크를 관리하려면 Google 계정으로 로그인해주세요."}
+            </p>
+            <Button
+              size="lg"
+              className={purpleButton}
+              onClick={() => (user ? signOut() : signIn().catch(() => {}))}
+            >
+              {user ? "로그아웃" : "Google로 로그인"}
+            </Button>
+          </section>
+        ) : (
+        <>
         <section className={panel}>
           <ProfileHeader profile={profile} />
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{user.email}</span>
+            <button type="button" onClick={() => signOut()} className="underline-offset-4 hover:underline">
+              로그아웃
+            </button>
+          </div>
         </section>
 
-        {/* 저장된 프로필을 불러오면 폼도 새 값으로 다시 그림 */}
+        {saveError && <p className="text-sm text-destructive">{saveError}</p>}
+
         <ProfileForm
-          key={JSON.stringify(profile)}
           profile={profile}
-          onSave={(p) => saveMyLink({ ...data, profile: p })}
+          onSave={(p) => save({ ...data, profile: p })}
         />
 
         <form onSubmit={handleSubmit} noValidate className={panel}>
@@ -216,11 +255,9 @@ export default function MyPage() {
             내 링크 {links.length}개
           </h2>
           <LinkList links={links} onDelete={handleDelete} />
-          <p className="text-xs text-muted-foreground">
-            ⚠️ 지금은 이 브라우저에만 저장돼요. 다른 사람에게도 보이게 하려면 9주차
-            Firebase 연동이 필요해요.
-          </p>
         </section>
+        </>
+        )}
       </div>
     </main>
   );

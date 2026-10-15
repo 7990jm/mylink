@@ -1,58 +1,42 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { defaultLinks, defaultProfile, type Link, type Profile } from "@/data/links";
+import { db } from "./firebase";
 
-// 프로필과 링크를 브라우저(localStorage)에 저장 → 새로고침해도 유지
-// 단, 이 브라우저에서만 보임. 방문자 모두에게 보이려면 9주차 Firebase 필요
+// 프로필과 링크를 Firestore 문서 하나(sites/main)에 저장
+// → 새로고침해도, 다른 기기·방문자에게도 똑같이 보임
 export type MyLinkData = { profile: Profile; links: Link[] };
 
-const KEY = "mylink:v1";
+const siteDoc = doc(db, "sites", "main");
 const defaults: MyLinkData = { profile: defaultProfile, links: defaultLinks };
-const listeners = new Set<() => void>();
-
-let cacheRaw: string | null = null;
-let cache: MyLinkData = defaults;
-
-function read(): MyLinkData {
-  let raw: string | null = null;
-  try {
-    raw = localStorage.getItem(KEY);
-  } catch {
-    return defaults;
-  }
-  if (raw === cacheRaw) return cache;
-  cacheRaw = raw;
-  try {
-    const parsed = raw ? JSON.parse(raw) : {};
-    cache = {
-      profile: { ...defaultProfile, ...parsed.profile },
-      links: Array.isArray(parsed.links) ? parsed.links : defaultLinks,
-    };
-  } catch {
-    cache = defaults;
-  }
-  return cache;
-}
-
-function subscribe(callback: () => void) {
-  listeners.add(callback);
-  window.addEventListener("storage", callback); // 다른 탭에서 바꿔도 반영
-  return () => {
-    listeners.delete(callback);
-    window.removeEventListener("storage", callback);
-  };
-}
 
 export function saveMyLink(data: MyLinkData) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(data));
-  } catch {
-    // 저장 공간을 쓸 수 없는 환경(시크릿 모드 등)
-  }
-  listeners.forEach((l) => l());
+  return setDoc(siteDoc, data);
 }
 
-export function useMyLink(): MyLinkData {
-  return useSyncExternalStore(subscribe, read, () => defaults);
+// 데이터가 바뀌면(내가 저장하거나 다른 기기에서 저장해도) 화면이 자동 갱신
+export function useMyLink(): MyLinkData & { loading: boolean } {
+  const [state, setState] = useState<MyLinkData & { loading: boolean }>({
+    ...defaults,
+    loading: true,
+  });
+
+  useEffect(() => {
+    return onSnapshot(
+      siteDoc,
+      (snap) => {
+        const d = snap.data() as Partial<MyLinkData> | undefined;
+        setState({
+          profile: { ...defaultProfile, ...d?.profile },
+          links: Array.isArray(d?.links) ? d.links : defaultLinks,
+          loading: false,
+        });
+      },
+      () => setState((s) => ({ ...s, loading: false }))
+    );
+  }, []);
+
+  return state;
 }
