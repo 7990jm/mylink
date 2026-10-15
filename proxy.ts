@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { UNLOCK_COOKIE, safeEqual, unlockToken } from "@/lib/site-lock";
+import { UNLOCK_COOKIE, isValidUnlockToken } from "@/lib/site-lock";
 
 // 사이트 전체 비밀번호 보호
 // Vercel 환경변수 SITE_PASSWORD가 있으면 잠금(→ /unlock 페이지), 없으면 공개
@@ -7,8 +7,7 @@ export async function proxy(request: NextRequest) {
   const password = process.env.SITE_PASSWORD;
   if (!password) return NextResponse.next();
 
-  const cookie = request.cookies.get(UNLOCK_COOKIE)?.value;
-  if (cookie && safeEqual(cookie, await unlockToken(password))) {
+  if (await isValidUnlockToken(request.cookies.get(UNLOCK_COOKIE)?.value, password)) {
     return NextResponse.next();
   }
 

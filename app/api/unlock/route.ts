@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { UNLOCK_COOKIE, safeEqual, unlockToken } from "@/lib/site-lock";
+import { UNLOCK_COOKIE, UNLOCK_SECONDS, createUnlockToken, safeEqual } from "@/lib/site-lock";
 
 export async function POST(request: Request) {
   const password = process.env.SITE_PASSWORD;
@@ -15,12 +15,12 @@ export async function POST(request: Request) {
   }
 
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(UNLOCK_COOKIE, await unlockToken(password), {
+  res.cookies.set(UNLOCK_COOKIE, await createUnlockToken(password), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30, // 30일 동안 다시 묻지 않음
+    maxAge: UNLOCK_SECONDS,
   });
   return res;
 }
