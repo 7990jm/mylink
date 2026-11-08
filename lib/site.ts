@@ -5,6 +5,6 @@ export const GITHUB_URL = "https://github.com/7990jm/mylink";
 export const BRAND_COLOR = "#5B5FC7";
 export const DEFAULT_DESCRIPTION = "나만의 링크 페이지를 30분 만에!";
 
-// 관리자 Google 계정 uid — 관리 화면(/mypage)과 데이터 수정은 이 계정만 가능
+// 관리자 Google 계정 uid — /admin 페이지에서 다른 사용자의 페이지를 삭제할 수 있음
 // firestore.rules의 isAdmin()과 같은 값이어야 함
 export const ADMIN_UID = "vstXPGHPVVe6y0VOzWGvYVFa4rv1";

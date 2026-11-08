@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, increment, onSnapshot,
-  orderBy, query, runTransaction, updateDoc,
+  addDoc, collection, deleteDoc, doc, getDoc, getDocs, increment, onSnapshot,
+  orderBy, query, runTransaction, updateDoc, writeBatch,
 } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { db } from "./firebase";
@@ -74,6 +74,37 @@ export function deleteLink(uid: string, id: string) {
 // 13주차: 클릭 수 +1 — 서버에 "+1 해줘"라고 요청해서 동시 클릭도 정확하게
 export function countClick(uid: string, id: string) {
   return updateDoc(doc(linksRef(uid), id), { clickCount: increment(1) });
+}
+
+// 관리자: 전체 사용자 목록 (링크 수·총 클릭 수 포함)
+export type UserSummary = Profile & { uid: string; linkCount: number; totalClicks: number };
+
+export async function listUsers(): Promise<UserSummary[]> {
+  const users = await getDocs(collection(db, "users"));
+  return Promise.all(
+    users.docs.map(async (u) => {
+      const links = (await getDocs(linksRef(u.id))).docs.map((d) => toLink(d.id, d.data()));
+      const d = u.data();
+      return {
+        uid: u.id,
+        username: d.username ?? "",
+        displayName: d.displayName ?? "",
+        bio: d.bio ?? "",
+        image: d.image ?? "",
+        linkCount: links.length,
+        totalClicks: links.reduce((sum, l) => sum + l.clickCount, 0),
+      };
+    })
+  );
+}
+
+// 관리자: 사용자 페이지 삭제 (링크 → 공유 주소 → 프로필 순)
+export async function deleteUserPage(uid: string, username: string) {
+  const batch = writeBatch(db);
+  (await getDocs(linksRef(uid))).docs.forEach((d) => batch.delete(d.ref));
+  if (username) batch.delete(nameRef(username));
+  batch.delete(userRef(uid));
+  await batch.commit();
 }
 
 // 데이터가 바뀌면 화면 자동 갱신

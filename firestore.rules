@@ -1,25 +1,27 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 관리자 Google 계정만 수정 가능 (lib/site.ts의 ADMIN_UID와 같은 값)
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // 관리자: 부적절한 페이지 삭제 가능 (lib/site.ts의 ADMIN_UID와 같은 값)
     function isAdmin() {
       return request.auth != null && request.auth.uid == 'vstXPGHPVVe6y0VOzWGvYVFa4rv1';
     }
 
-    function isOwner(userId) {
-      return isAdmin() && request.auth.uid == userId;
-    }
-
-    // 프로필: 읽기는 누구나, 쓰기는 관리자 본인만
+    // 프로필: 읽기는 누구나, 쓰기는 본인만 (삭제는 관리자도)
     match /users/{userId} {
       allow read: if true;
       allow write: if isOwner(userId);
+      allow delete: if isAdmin();
 
-      // 링크: 읽기는 누구나, 추가·수정·삭제는 관리자 본인만
+      // 링크: 읽기는 누구나, 추가·수정·삭제는 본인만 (삭제는 관리자도)
       // 단, 방문자는 clickCount를 정확히 +1 하는 것만 허용 (클릭 통계)
       match /links/{linkId} {
         allow read: if true;
-        allow create, delete: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow delete: if isOwner(userId) || isAdmin();
         allow update: if isOwner(userId)
           || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clickCount'])
               && request.resource.data.clickCount == resource.data.get('clickCount', 0) + 1);
@@ -29,11 +31,11 @@ service cloud.firestore {
     // 공유 주소 → uid 매핑 (중복 방지)
     match /usernames/{name} {
       allow read: if true;
-      allow create: if isAdmin()
+      allow create: if request.auth != null
         && request.resource.data.keys().hasOnly(['uid'])
         && request.resource.data.uid == request.auth.uid
         && name.matches('^[a-z0-9][a-z0-9_-]{2,19}$');
-      allow delete: if isAdmin() && resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && (resource.data.uid == request.auth.uid || isAdmin());
     }
 
     // 그 외 모든 문서는 차단

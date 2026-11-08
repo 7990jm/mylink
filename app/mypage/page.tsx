@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ProfileHeader } from "@/components/profile-header";
 import { Button } from "@/components/ui/button";
 import { ensureProfile, useLinks, useProfile } from "@/lib/db";
+import { ADMIN_UID } from "@/lib/site";
 import { useAuth } from "@/lib/use-auth";
 import { AddLinkForm, LinkRows } from "./link-manager";
 import { ProfileForm } from "./profile-form";
@@ -38,6 +39,11 @@ export default function MyPage() {
           <h1 className="text-2xl font-semibold">내 링크 관리</h1>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span className="truncate">{profile.displayName}님</span>
+            {user.uid === ADMIN_UID && (
+              <NextLink href="/admin" className="shrink-0 underline-offset-4 hover:underline">
+                관리자
+              </NextLink>
+            )}
             <button type="button" onClick={() => signOut()} className="shrink-0 underline-offset-4 hover:underline">
               로그아웃
             </button>

@@ -51,4 +51,4 @@ npm run dev        # http://localhost:3000
 에뮬레이터로 테스트: `firebase emulators:start --only auth,firestore` 후
 `NEXT_PUBLIC_FIREBASE_EMULATOR=1 npm run dev`
 
-관리 화면(`/login`, `/mypage`)은 관리자 전용이에요: Vercel 환경변수 `SITE_PASSWORD` 비밀번호(`proxy.ts`) + 관리자 Google 계정(`lib/site.ts`의 `ADMIN_UID`, `firestore.rules`의 `isAdmin()`). 첫 화면과 개인 링크 페이지는 누구나 볼 수 있어요.
+누구나 Google로 가입해 자기 페이지를 만들 수 있고, 수정은 본인만 가능해요. 관리자 계정(`lib/site.ts`의 `ADMIN_UID`, `firestore.rules`의 `isAdmin()`)은 `/admin`에서 전체 사용자를 보고 부적절한 페이지를 삭제할 수 있어요.
