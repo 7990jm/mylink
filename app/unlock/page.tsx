@@ -43,8 +43,8 @@ export default function UnlockPage() {
         className="flex w-full max-w-xs flex-col gap-4 rounded-xl bg-card p-6 ring-1 ring-foreground/10"
       >
         <div className="flex flex-col gap-1 text-center">
-          <h1 className="text-lg font-semibold">🔒 비공개 페이지</h1>
-          <p className="text-sm text-muted-foreground">비밀번호를 입력해주세요</p>
+          <h1 className="text-lg font-semibold">🔒 관리자 로그인</h1>
+          <p className="text-sm text-muted-foreground">관리자 비밀번호를 입력해주세요</p>
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="password" className="sr-only">

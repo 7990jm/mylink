@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { UNLOCK_COOKIE, isValidUnlockToken } from "@/lib/site-lock";
 
-// 사이트 전체 비밀번호 보호
+// 관리 화면(/login, /mypage) 비밀번호 보호 — 개인 링크 페이지·첫 화면은 누구나 접속
 // Vercel 환경변수 SITE_PASSWORD가 있으면 잠금(→ /unlock 페이지), 없으면 공개
 export async function proxy(request: NextRequest) {
   const password = process.env.SITE_PASSWORD;
@@ -18,6 +18,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // 비밀번호 페이지·빌드 파일은 제외하고 모든 페이지 보호
-  matcher: ["/((?!unlock|api/unlock|_next/static|_next/image|favicon.ico).*)"],
+  // 관리 화면만 보호
+  matcher: ["/login", "/mypage/:path*"],
 };

@@ -51,4 +51,4 @@ npm run dev        # http://localhost:3000
 에뮬레이터로 테스트: `firebase emulators:start --only auth,firestore` 후
 `NEXT_PUBLIC_FIREBASE_EMULATOR=1 npm run dev`
 
-선택: Vercel 환경변수 `SITE_PASSWORD`를 넣으면 사이트 전체가 비밀번호로 잠겨요 (`proxy.ts`).
+관리 화면(`/login`, `/mypage`)은 관리자 전용이에요: Vercel 환경변수 `SITE_PASSWORD` 비밀번호(`proxy.ts`) + 관리자 Google 계정(`lib/site.ts`의 `ADMIN_UID`, `firestore.rules`의 `isAdmin()`). 첫 화면과 개인 링크 페이지는 누구나 볼 수 있어요.
